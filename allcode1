@@ -15,11 +15,17 @@
         body {
             font-family: 'Assistant', sans-serif;
         }
-        /* Style for active tab */
-        .tab-active {
-            border-color: #3b82f6; /* blue-500 */
-            background-color: #eff6ff; /* blue-50 */
-            color: #1e40af; /* blue-800 */
+        #loader {
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #3498db;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
     </style>
 </head>
@@ -28,144 +34,149 @@
     <div class="container mx-auto p-4 sm:p-6 md:p-8">
         
         <header class="mb-8">
-            <h1 class="text-3xl md:text-4xl font-bold text-blue-800">מערכת ניתוח נתוני תחבורה ציבורית</h1>
-            <p class="text-lg text-gray-600">ניתוח קבוצתי לפי מחוז</p>
+            <h1 class="text-3xl md:text-4xl font-bold text-blue-800">ניתוח שינויים בתחבורה ציבורית לאורך זמן</h1>
+            <p class="text-base text-gray-600 leading-relaxed mt-2">אתר זה עוקב אחר פרסומים על שינויים בקווי התחבורה הציבורית, ומספק את המידע על היקף התיקופים השבועי הממוצע בתקופות שגרה בקווים שהופיעו בפרסום לציבור ולעיתים בקווים נוספים המושפעים מהשינוי.<br>המידע מתעדכן 3 פעמים בשנה (בהתאם לתקופות השגרה ברבעונים 1,2,4 המשמשים גם את הבסיס ל<a href="https://markav.net/page/6/" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:underline">תקופות המדידה של אתר "מר-קו"</a>).</p>
+            <div class="mt-4 text-base text-gray-600 leading-relaxed">
+                <p>לאתר שתי מטרות עיקריות:</p>
+                <ul class="list-disc list-inside mt-2 space-y-1">
+                    <li>שימור הזכרון הארגוני לגבי שינויים שנעשו בקווים והסיבה להם (למידע מפורט על מהות השינוי ניתן להמשיך את הבדיקה באתר היסטוריית הGTFS "<a href="https://gtfs.mpayer.co.il/" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:underline">הקו המשווה</a>").</li>
+                    <li>בחינה של ההשפעה ההדדית של השינויים בקווי אוטובוס על קווים אחרים לאורך זמן.</li>
+                </ul>
+            </div>
         </header>
 
-        <!-- Navigation Tabs for Districts -->
-        <nav class="mb-4">
-             <h3 class="text-sm font-bold text-gray-500 uppercase tracking-wide mb-2">1. בחר מחוז</h3>
-            <div id="district-tabs-container" class="flex border-b border-gray-300 overflow-x-auto">
-                <!-- District tabs will be dynamically inserted here -->
+        <!-- Search Bar -->
+        <div class="mb-8 relative">
+            <input type="text" id="search-input" placeholder="חיפוש קבוצה (לדוגמה: אשדוד, עכו פנימי...)" class="w-full p-3 pr-10 rounded-md border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition">
+            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <svg class="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd" />
+                </svg>
             </div>
-        </nav>
-
-        <!-- Navigation Tabs for Groups -->
-        <nav class="mb-6">
-            <h3 class="text-sm font-bold text-gray-500 uppercase tracking-wide mb-2">2. בחר קבוצה</h3>
-            <div id="tabs-container" class="flex border-b border-gray-300 overflow-x-auto">
-                <!-- Group tabs will be dynamically inserted here -->
+            <div id="search-results" class="absolute z-10 w-full bg-white border border-gray-300 rounded-md mt-1 hidden shadow-lg max-h-60 overflow-y-auto">
+                <!-- Search results will be populated here -->
             </div>
-        </nav>
+        </div>
 
-        <!-- Main Content Card -->
-        <main id="main-content" class="bg-white p-6 rounded-lg shadow-lg hidden">
-
-            <!-- Group Information Section -->
-            <div class="mb-6 pb-6 border-b border-gray-200">
-                <h2 class="text-2xl font-bold text-gray-800 ml-4" id="groupTitle"></h2>
-            </div>
-
-            <!-- Change Info Section -->
-            <div id="changeInfoSection" class="mb-8 p-4 bg-amber-50 border-r-4 border-amber-400 rounded-r-lg hidden">
-                <h3 class="text-xl font-bold text-amber-800 mb-2">שינויים מרכזיים בקבוצה</h3>
-                <p class="text-gray-700"><strong class="font-semibold">תאריך השינוי:</strong> <span id="changeDate"></span></p>
-                <p class="text-gray-700 mt-1"><strong class="font-semibold">תיאור השינוי:</strong> <span id="changeDescription"></span></p>
-            </div>
-
-            <!-- Chart Section -->
-            <div class="mt-8">
-                <h3 class="text-xl font-semibold mb-4">ממוצע תיקופים שבועי</h3>
-                <div class="bg-gray-50 p-4 rounded-lg">
-                   <div class="flex justify-end space-x-2 space-x-reverse mb-2">
-                        <button id="selectAllBtn" class="px-3 py-1 bg-blue-500 text-white rounded-md text-sm hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">בחר הכל</button>
-                        <button id="clearAllBtn" class="px-3 py-1 bg-gray-500 text-white rounded-md text-sm hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500">נקה הכל</button>
-                   </div>
-                   <div class="relative h-96">
-                       <canvas id="ridershipChart"></canvas>
-                   </div>
-                   <div class="mt-4 pt-4 border-t border-gray-200 flex justify-between items-center font-bold">
-                       <span class="text-gray-700">היקף השינוי (Q1 2018 - Q2 2025):</span>
-                       <span id="ridershipChange" class="text-lg"></span>
-                   </div>
+        <!-- Loading Indicator -->
+        <div id="loading-container" class="text-center py-10">
+            <div id="loader" class="mx-auto"></div>
+            <p class="mt-4 text-gray-600">טוען נתונים...</p>
+        </div>
+        
+        <div id="app-container" class="hidden">
+            <!-- Navigation Tabs for Districts -->
+            <nav class="mb-4">
+                 <h3 class="text-sm font-bold text-gray-500 uppercase tracking-wide mb-2">1. בחר מחוז</h3>
+                <div id="district-tabs-container" class="flex flex-wrap gap-2">
+                    <!-- District tabs will be dynamically inserted here -->
                 </div>
-            </div>
-
-            <!-- Kilometer Data Table Section -->
-            <div class="mt-8">
-                <h3 class="text-xl font-semibold mb-4">סיכום נתוני קילומטראז' (ק"מ שבועי)</h3>
-                <div class="overflow-x-auto">
-                    <table class="min-w-full bg-white border border-gray-200 rounded-lg">
-                        <thead class="bg-gray-50">
-                            <tr>
-                                <th class="py-3 px-4 border-b text-right font-bold text-gray-600">שנה</th>
-                                <th class="py-3 px-4 border-b text-right font-bold text-gray-600">רבעון</th>
-                                <th class="py-3 px-4 border-b text-right font-bold text-gray-600">סה"כ ק"מ שבועי בקבוצה</th>
-                            </tr>
-                        </thead>
-                        <tbody id="kmDataTableBody">
-                            <!-- Data rows will be inserted here by JavaScript -->
-                        </tbody>
-                        <!-- Footer for summary will be inserted here -->
-                    </table>
+            </nav>
+    
+            <!-- Navigation Tabs for Groups -->
+            <nav class="mb-6">
+                <h3 class="text-sm font-bold text-gray-500 uppercase tracking-wide mb-2">2. בחר קבוצה</h3>
+                <div id="tabs-container" class="flex flex-col gap-2">
+                    <!-- Group tabs will be dynamically inserted here -->
                 </div>
-            </div>
-            
-            <!-- Ratio Summary -->
-            <div id="ratioSummarySection" class="mt-8 hidden">
-                <div class="bg-indigo-50 p-4 rounded-lg text-center">
-                    <p id="ratioSummaryText" class="text-lg font-semibold text-indigo-800"></p>
+            </nav>
+    
+            <!-- Main Content Card -->
+            <main id="main-content" class="bg-white p-6 rounded-lg shadow-lg hidden">
+    
+                <!-- Group Information Section -->
+                <div class="mb-6 pb-6 border-b border-gray-200">
+                    <h2 class="text-2xl font-bold text-gray-800 ml-4" id="groupTitle"></h2>
                 </div>
-            </div>
-
-        </main>
+    
+                <!-- Change Info Section -->
+                <div id="changeInfoContainer" class="hidden">
+                    <!-- Change info boxes will be dynamically inserted here -->
+                </div>
+    
+                <!-- Chart Section -->
+                <div class="mt-8">
+                    <h3 class="text-xl font-semibold mb-4">ממוצע תיקופים שבועי</h3>
+                    <div class="bg-gray-50 p-4 rounded-lg">
+                       <div class="flex justify-center space-x-2 space-x-reverse mb-4">
+                            <button id="selectAllBtn" class="px-3 py-1 bg-blue-500 text-white rounded-md text-sm hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">בחר הכל</button>
+                            <button id="clearAllBtn" class="px-3 py-1 bg-gray-500 text-white rounded-md text-sm hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500">נקה הכל</button>
+                       </div>
+                       <!-- Custom Legend Container -->
+                       <div id="custom-legend-container" class="mb-4 border-b pb-4"></div>
+                       <div class="relative h-96">
+                           <canvas id="ridershipChart"></canvas>
+                       </div>
+                       <div class="mt-4 pt-4 border-t border-gray-200 flex justify-between items-center">
+                           <div class="font-bold">
+                               <span class="text-gray-700">היקף השינוי (Q1 2018 - Q2 2025):</span>
+                               <span id="ridershipChange" class="text-lg"></span>
+                           </div>
+                           <button id="exportCsvBtn" class="px-3 py-1 bg-green-600 text-white rounded-md text-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 flex items-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                </svg>
+                               ייצוא ל-CSV
+                           </button>
+                       </div>
+                    </div>
+                </div>
+    
+                <!-- Kilometer Data Table Section -->
+                <div class="mt-8">
+                    <h3 class="text-xl font-semibold mb-4">סיכום נתוני קילומטראז' (ק"מ שבועי)</h3>
+                    <p class="text-sm text-gray-500 -mt-3 mb-4">משתנה בהתאם לקווים שנבחרו בגרף</p>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full bg-white border border-gray-200 rounded-lg">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="py-3 px-4 border-b text-right font-bold text-gray-600">שנה</th>
+                                    <th class="py-3 px-4 border-b text-right font-bold text-gray-600">רבעון</th>
+                                    <th class="py-3 px-4 border-b text-right font-bold text-gray-600">סה"כ ק"מ שבועי בקבוצה</th>
+                                </tr>
+                            </thead>
+                            <tbody id="kmDataTableBody">
+                                <!-- Data rows will be inserted here by JavaScript -->
+                            </tbody>
+                            <!-- Footer for summary will be inserted here -->
+                        </table>
+                    </div>
+                </div>
+                
+                <!-- Ratio Summary -->
+                <div id="ratioSummarySection" class="mt-8 hidden">
+                    <div class="bg-indigo-50 p-4 rounded-lg text-center">
+                        <p id="ratioSummaryText" class="text-lg font-semibold text-indigo-800"></p>
+                    </div>
+                </div>
+    
+            </main>
+        </div>
         
     </div>
 
     <script>
-        // --- Raw Data Input Section ---
-        const rawData = [
-            // --- Group: Akko Pnimi ---
-            { "מחוז": "גולן, גליל ועמקים", "שם קבוצה": "עכו פנימי", "מקט": 12002, "קו": "קו 2 (12002)", "18/Q1": 16898, "18/Q2": 19917, "18/Q4": 20614, "19/Q1": 21905, "19/Q2": 21562, "19/Q4": 22375, "20/Q1": 21190, "20/Q2": 11379, "20/Q4": 10554, "21/Q1": 8862, "21/Q2": 15324, "21/Q4": 16923, "22/Q1": 15703, "22/Q2": 18021, "22/Q4": 19954, "23/Q1": 19312, "23/Q2": 20265, "23/Q4": 7387, "24/Q1": 15757, "24/Q2": 14718, "Q4/24": 13428, "Q1/25": 16777, "Q2/25": 16563, "קמ שבועי Q4 2018": "8,801", "קמ  שבועי Q2 2025": "10,574" },
-            { "מחוז": "גולן, גליל ועמקים", "שם קבוצה": "עכו פנימי", "מקט": 77003, "קו": "קו 3 (77003)", "18/Q1": 6455, "18/Q2": 6968, "18/Q4": 6946, "19/Q1": 6957, "19/Q2": 6850, "19/Q4": 7708, "20/Q1": 7102, "20/Q2": 2896, "20/Q4": 2994, "21/Q1": 2388, "21/Q2": 4199, "21/Q4": 5207, "22/Q1": 4561, "22/Q2": 5352, "22/Q4": 6259, "23/Q1": 6269, "23/Q2": 6319, "23/Q4": 3417, "24/Q1": 3656, "24/Q2": 4095, "Q4/24": 3201, "Q1/25": 4432, "Q2/25": 4823, "קמ שבועי Q4 2018": "6,432", "קמ  שבועי Q2 2025": "6,088" },
-            { "מחוז": "גולן, גליל ועמקים", "שם קבוצה": "עכו פנימי", "מקט": 91004, "קו": "קו 4 (91004)", "18/Q1": "", "18/Q2": "", "18/Q4": "", "19/Q1": "", "19/Q2": "", "19/Q4": 2710, "20/Q1": 2817, "20/Q2": 1431, "20/Q4": 1373, "21/Q1": 1266, "21/Q2": 2049, "21/Q4": 2591, "22/Q1": 2339, "22/Q2": 2862, "22/Q4": 3557, "23/Q1": 3931, "23/Q2": 4318, "23/Q4": 4255, "24/Q1": 4483, "24/Q2": 4616, "Q4/24": 3998, "Q1/25": 5416, "Q2/25": 6013, "קמ שבועי Q4 2018": 0, "קמ  שבועי Q2 2025": "6,236" },
-            { "מחוז": "גולן, גליל ועמקים", "שם קבוצה": "עכו פנימי", "מקט": 59005, "קו": "קו 5 (59005)", "18/Q1": "", "18/Q2": "", "18/Q4": "", "19/Q1": "", "19/Q2": "", "19/Q4": "", "20/Q1": "", "20/Q2": "", "20/Q4": "", "21/Q1": "", "21/Q2": "", "21/Q4": "", "22/Q1": "", "22/Q2": "", "22/Q4": "", "23/Q1": "", "23/Q2": "", "23/Q4": 921, "24/Q1": 1080, "24/Q2": 1487, "Q4/24": 1113, "Q1/25": 1456, "Q2/25": 1612, "קמ שבועי Q4 2018": 0, "קמ  שבועי Q2 2025": "3,101" },
-            { "מחוז": "מטרופולין חיפה", "שם קבוצה": "חריש פנימי", "מק\"ט": 35022, "קו": "קו 22 (35022)", "18/Q1": "", "18/Q2": "", "18/Q4": "", "19/Q1": "", "19/Q2": "", "19/Q4": "", "20/Q1": "", "20/Q2": "", "20/Q4": "", "21/Q1": "", "21/Q2": "", "21/Q4": 811, "22/Q1": 1471, "22/Q2": 2380, "22/Q4": 3557, "23/Q1": 3416, "23/Q2": 3492, "23/Q4": 1767, "24/Q1": 1985, "24/Q2": 2233, "Q4/24": 2748, "Q1/25": 3464, "Q2/25": 3767, "ק\"מ שבועי Q4 2018": 0, "ק\"מ  שבועי Q2 2025": "4,402" },
-            // --- Group: Rosh Haayin Pnimi ---
-            { "מחוז": "מרכז", "שם קבוצה": "ראש העין פנימי", "מקט": 71001, "קו": "קו 1 (71001)", "18/Q1": 1955, "18/Q2": 2119, "18/Q4": 2097, "19/Q1": 2024, "19/Q2": 2065, "19/Q4": 2090, "20/Q1": 2007, "20/Q2": 1244, "20/Q4": "", "21/Q1": "", "21/Q2": "", "21/Q4": "", "22/Q1": "", "22/Q2": "", "22/Q4": "", "23/Q1": "", "23/Q2": "", "23/Q4": "", "24/Q1": "", "24/Q2": "", "Q4/24": "", "Q1/25": "", "Q2/25": "", "ק\"מ שבועי Q4 2018": "2,062", "ק\"מ  שבועי Q2 2025": 0 },
-            { "מחוז": "מרכז", "שם קבוצה": "ראש העין פנימי", "מקט": 59002, "קו": "קו 2 (59002)", "18/Q1": 1251, "18/Q2": 1357, "18/Q4": 1342, "19/Q1": 1295, "19/Q2": 1322, "19/Q4": 1338, "20/Q1": 1285, "20/Q2": 796, "20/Q4": "", "21/Q1": "", "21/Q2": "", "21/Q4": "", "22/Q1": "", "22/Q2": "", "22/Q4": "", "23/Q1": "", "23/Q2": "", "23/Q4": "", "24/Q1": "", "24/Q2": "", "Q4/24": 163, "Q1/25": 140, "Q2/25": 105, "ק\"מ שבועי Q4 2018": "2,804", "ק\"מ  שבועי Q2 2025": "1,408" },
-            { "מחוז": "מרכז", "שם קבוצה": "ראש העין פנימי", "מקט": 50008, "קו": "קו 8 (50008)", "18/Q1": 1978, "18/Q2": 2144, "18/Q4": 2122, "19/Q1": 2048, "19/Q2": 2089, "19/Q4": 2115, "20/Q1": 2031, "20/Q2": 1259, "20/Q4": "", "21/Q1": "", "21/Q2": "", "21/Q4": "", "22/Q1": "", "22/Q2": "", "22/Q4": "", "23/Q1": "", "23/Q2": "", "23/Q4": "", "24/Q1": "", "24/Q2": "", "Q4/24": "", "Q1/25": "", "Q2/25": "", "ק\"מ שבועי Q4 2018": "2,771", "ק\"מ  שבועי Q2 2025": 0 },
-            { "מחוז": "מרכז", "שם קבוצה": "ראש העין פנימי", "מקט": 46009, "קו": "קו 9 (46009)", "18/Q1": 5947, "18/Q2": 6290, "18/Q4": 6644, "19/Q1": 6872, "19/Q2": 6385, "19/Q4": 8143, "20/Q1": 8308, "20/Q2": 4361, "20/Q4": 2953, "21/Q1": 2154, "21/Q2": 5303, "21/Q4": 5867, "22/Q1": 4412, "22/Q2": 4538, "22/Q4": 4969, "23/Q1": 5286, "23/Q2": 5104, "23/Q4": 4783, "24/Q1": 4980, "24/Q2": 4744, "Q4/24": 6448, "Q1/25": 6324, "Q2/25": 6038, "ק\"מ שבועי Q4 2018": "6,462", "ק\"מ  שבועי Q2 2025": "6,712" },
-            { "מחוז": "מרכז", "שם קבוצה": "ראש העין פנימי", "מקט": 66011, "קו": "קו 11 (66011)", "18/Q1": 2446, "18/Q2": 2542, "18/Q4": 2628, "19/Q1": 2600, "19/Q2": 2605, "19/Q4": 2791, "20/Q1": 2717, "20/Q2": 1555, "20/Q4": 1015, "21/Q1": 819, "21/Q2": 2044, "21/Q4": 2298, "22/Q1": 1223, "22/Q2": 1489, "22/Q4": 1814, "23/Q1": 2060, "23/Q2": 1938, "23/Q4": 1739, "24/Q1": 2004, "24/Q2": 1769, "Q4/24": 2124, "Q1/25": 2002, "Q2/25": 1692, "ק\"מ שבועי Q4 2018": "3,323", "ק\"מ  שבועי Q2 2025": "3,498" },
-            { "מחוז": "מרכז", "שם קבוצה": "ראש העין פנימי", "מקט": 50012, "קו": "קו 12 (50012)", "18/Q1": 1196, "18/Q2": 1261, "18/Q4": 1405, "19/Q1": 1422, "19/Q2": 1320, "19/Q4": 1389, "20/Q1": 1433, "20/Q2": 766, "20/Q4": 711, "21/Q1": 630, "21/Q2": 1101, "21/Q4": 1135, "22/Q1": 822, "22/Q2": 869, "22/Q4": 838, "23/Q1": 857, "23/Q2": 933, "23/Q4": 902, "24/Q1": 1020, "24/Q2": 840, "Q4/24": 1123, "Q1/25": 1113, "Q2/25": 1046, "ק\"מ שבועי Q4 2018": "3,412", "ק\"מ  שבועי Q2 2025": "3,513" },
-            { "מחוז": "מרכז", "שם קבוצה": "ראש העין פנימי", "מקט": 57013, "קו": "קו 13 (57013)", "18/Q1": 2243, "18/Q2": 2516, "18/Q4": 2592, "19/Q1": 2504, "19/Q2": 2603, "19/Q4": 2889, "20/Q1": 2864, "20/Q2": 1981, "20/Q4": 1557, "21/Q1": 1367, "21/Q2": 2194, "21/Q4": 2345, "22/Q1": 1970, "22/Q2": 2226, "22/Q4": 2092, "23/Q1": 2063, "23/Q2": 2093, "23/Q4": 1736, "24/Q1": 1865, "24/Q2": 1714, "Q4/24": 2249, "Q1/25": 2188, "Q2/25": 2010, "ק\"מ שבועי Q4 2018": "3,885", "ק\"מ  שבועי Q2 2025": "4,028" },
-            { "מחוז": "מרכז", "שם קבוצה": "ראש העין פנימי", "מקט": 50014, "קו": "קו 14 (50014)", "18/Q1": 1010, "18/Q2": 1414, "18/Q4": 1243, "19/Q1": 1333, "19/Q2": 1454, "19/Q4": 1461, "20/Q1": 1404, "20/Q2": 964, "20/Q4": 872, "21/Q1": 831, "21/Q2": 1344, "21/Q4": 1488, "22/Q1": 1133, "22/Q2": 1180, "22/Q4": 1129, "23/Q1": 998, "23/Q2": 1083, "23/Q4": 1101, "24/Q1": 1237, "24/Q2": 1507, "Q4/24": 1466, "Q1/25": 1569, "Q2/25": 1408, "ק\"מ שבועי Q4 2018": "4,929", "ק\"מ  שבועי Q2 2025": "5,381" },
-            { "מחוז": "מרכז", "שם קבוצה": "ראש העין פנימי", "מקט": 42018, "קו": "קו 18 (42018)", "18/Q1": 3012, "18/Q2": 3266, "18/Q4": 3232, "19/Q1": 3119, "19/Q2": 3182, "19/Q4": 3221, "20/Q1": 3094, "20/Q2": 1917, "20/Q4": "", "21/Q1": "", "21/Q2": "", "21/Q4": "", "22/Q1": "", "22/Q2": "", "22/Q4": "", "23/Q1": "", "23/Q2": "", "23/Q4": "", "24/Q1": "", "24/Q2": "", "Q4/24": "", "Q1/25": "", "Q2/25": "", "ק\"מ שבועי Q4 2018": "2,256", "ק\"מ  שבועי Q2 2025": 0 },
-            { "מחוז": "מרכז", "שם קבוצה": "ראש העין פנימי", "מקט": 33028, "קו": "קו 28 (33028)", "18/Q1": 863, "18/Q2": 936, "18/Q4": 926, "19/Q1": 894, "19/Q2": 912, "19/Q4": 923, "20/Q1": 886, "20/Q2": 549, "20/Q4": "", "21/Q1": "", "21/Q2": "", "21/Q4": "", "22/Q1": "", "22/Q2": "", "22/Q4": "", "23/Q1": "", "23/Q2": "", "23/Q4": "", "24/Q1": "", "24/Q2": "", "Q4/24": "", "Q1/25": "", "Q2/25": "", "ק\"מ שבועי Q4 2018": "2,593", "ק\"מ  שבועי Q2 2025": 0 },
-            { "מחוז": "מרכז", "שם קבוצה": "ראש העין פנימי", "מקט": 25038, "קו": "קו 38 (25038)", "18/Q1": 921, "18/Q2": 823, "18/Q4": 742, "19/Q1": 788, "19/Q2": 855, "19/Q4": 763, "20/Q1": 704, "20/Q2": "", "20/Q4": 135, "21/Q1": 74, "21/Q2": 235, "21/Q4": 257, "22/Q1": 287, "22/Q2": 412, "22/Q4": 436, "23/Q1": 392, "23/Q2": 354, "23/Q4": 222, "24/Q1": 252, "24/Q2": 272, "Q4/24": 301, "Q1/25": 307, "Q2/25": 292, "ק\"מ שבועי Q4 2018": 596, "ק\"מ  שבועי Q2 2025": 623 },
-            { "מחוז": "מרכז", "שם קבוצה": "ראש העין פנימי", "מקט": 38048, "קו": "קו 48 (38048)", "18/Q1": 1350, "18/Q2": 1464, "18/Q4": 1449, "19/Q1": 1398, "19/Q2": 1427, "19/Q4": 1444, "20/Q1": 1387, "20/Q2": 859, "20/Q4": "", "21/Q1": "", "21/Q2": "", "21/Q4": "", "22/Q1": "", "22/Q2": "", "22/Q4": "", "23/Q1": "", "23/Q2": "", "23/Q4": "", "24/Q1": "", "24/Q2": "", "Q4/24": "", "Q1/25": "", "Q2/25": "", "ק\"מ שבועי Q4 2018": "1,637", "ק\"מ  שבועי Q2 2025": 0 },
-            { "מחוז": "מרכז", "שם קבוצה": "ראש העין פנימי", "מקט": 37071, "קו": "קו 71 (37071)", "18/Q1": "", "18/Q2": "", "18/Q4": "", "19/Q1": "", "19/Q2": "", "19/Q4": "", "20/Q1": "", "20/Q2": "", "20/Q4": 2191, "21/Q1": 1641, "21/Q2": 3895, "21/Q4": 3910, "22/Q1": 3972, "22/Q2": 5383, "22/Q4": 5971, "23/Q1": 6138, "23/Q2": 6221, "23/Q4": 5289, "24/Q1": 6532, "24/Q2": 7456, "Q4/24": 7751, "Q1/25": 7419, "Q2/25": 7550, "ק\"מ שבועי Q4 2018": 0, "ק\"מ  שבועי Q2 2025": "5,801" },
-            { "מחוז": "מרכז", "שם קבוצה": "ראש העין פנימי", "מקט": 43072, "קו": "קו 72 (43072)", "18/Q1": "", "18/Q2": "", "18/Q4": "", "19/Q1": "", "19/Q2": "", "19/Q4": "", "20/Q1": "", "20/Q2": "", "20/Q4": 479, "21/Q1": 341, "21/Q2": 804, "21/Q4": 746, "22/Q1": 830, "22/Q2": 1221, "22/Q4": 1217, "23/Q1": 1228, "23/Q2": 1284, "23/Q4": 791, "24/Q1": 984, "24/Q2": 1331, "Q4/24": 1189, "Q1/25": 1157, "Q2/25": 1234, "ק\"מ שבועי Q4 2018": 0, "ק\"מ  שבועי Q2 2025": "6,160" },
-            { "מחוז": "מרכז", "שם קבוצה": "ראש העין פנימי", "מקט": 54073, "קו": "קו 73 (54073)", "18/Q1": "", "18/Q2": "", "18/Q4": "", "19/Q1": "", "19/Q2": "", "19/Q4": "", "20/Q1": "", "20/Q2": "", "20/Q4": 837, "21/Q1": 644, "21/Q2": 1709, "21/Q4": 1797, "22/Q1": 1810, "22/Q2": 2427, "22/Q4": 2754, "23/Q1": 2877, "23/Q2": 2866, "23/Q4": 2496, "24/Q1": 2883, "24/Q2": 3317, "Q4/24": 3763, "Q1/25": 3817, "Q2/25": 3853, "ק\"מ שבועי Q4 2018": 0, "ק\"מ  שבועי Q2 2025": "6,377" },
-            { "מחוז": "מרכז", "שם קבוצה": "ראש העין פנימי", "מקט": 44074, "קו": "קו 74 (44074)", "18/Q1": "", "18/Q2": "", "18/Q4": "", "19/Q1": "", "19/Q2": "", "19/Q4": "", "20/Q1": "", "20/Q2": "", "20/Q4": 946, "21/Q1": 703, "21/Q2": 1788, "21/Q4": 1645, "22/Q1": 1534, "22/Q2": 2316, "22/Q4": 2476, "23/Q1": 2702, "23/Q2": 2489, "23/Q4": 1988, "24/Q1": 2332, "24/Q2": 2250, "Q4/24": 2564, "Q1/25": 2482, "Q2/25": 2294, "ק\"מ שבועי Q4 2018": 0, "ק\"מ  שבועי Q2 2025": "6,557" }
+        // --- Static Data ---
+        const ALL_DISTRICTS = [
+            "גוש דן", "י-ם", "גולן גליל ועמקים", "מטרופולין חיפה",
+            "הדרום", "מרכז", "יו\"ש", "בין מחוזי"
         ];
 
-        // --- Data Processing and Application State ---
+        // --- Application State ---
         let transportData = [];
+        let groupChangeInfo = [];
         let dataMap = {};
-        let districtNames = [];
         let currentChart = null;
+        let searchTimeout = null;
         
-        const groupChangeInfo = [
-            {
-                "קיטלוג": "עפולה פנימי",
-                "מחוז": "גולן גליל ועמקים",
-                "תאריך פעימה": "18.08.2021",
-                "הרבעון שבו בוצע עיקר השינוי": "Q4/21",
-                "תיאור": "ביטול קווים מזינים 110,115,116,123, פתיחת קו 5, פיצול קו 10 לקווים 10,11, מעבר קווים 3,5 ו-11 ברחוב דובנוב בממשק עם תחנת הרכבת, תגבורי קווים"
-            },
-            {
-                "קיטלוג": "עכו פנימי",
-                "מחוז": "גולן גליל ועמקים",
-                "תאריך פעימה": "23.08.2023",
-                "הרבעון שבו בוצע עיקר השינוי": "Q4/23",
-                "תיאור": "פתיחת קו 5, קיצור קו 4 כך שלא יגיע יותר לאזור התעשיה הדרומי (קו 251 ייתן את השירות במקומו), שינויי מסלול לקווים 3 ו-4 באזור העיר העתיקה והגדלת תדירות"
-            }
-        ];
 
         // --- Data Processing Function ---
         function processRawData(data) {
             return data.map(item => {
+                if (!item || typeof item["קו"] !== 'string' || !item["מחוז"] || !item["שם קבוצה"]) {
+                    console.warn('Skipping invalid item in rawData (missing essential properties):', item);
+                    return null; 
+                }
                 const makat = item["מקט"] || item["מק\"ט"];
                 const lineNumMatch = item["קו"].match(/(\d+)/);
                 const lineNumber = lineNumMatch ? lineNumMatch[0] : item["קו"];
@@ -202,13 +213,18 @@
                 processed.ridershipData.sort((a, b) => a.year - b.year || a.quarter.localeCompare(b.quarter));
                 processed.kilometerData.sort((a, b) => a.year - b.year || a.quarter.localeCompare(b.quarter));
                 return processed;
-            });
+            }).filter(Boolean);
         }
 
         // --- Main Render Function ---
         function renderGroupData(groupName) {
             const mainContent = document.getElementById('main-content');
             
+            if (!groupName) {
+                mainContent.classList.add('hidden');
+                return;
+            }
+
             const groupData = transportData.filter(line => line.groupName === groupName);
             if (groupData.length === 0) {
                  mainContent.classList.add('hidden');
@@ -219,22 +235,102 @@
             const groupInfo = groupData[0];
             document.getElementById('groupTitle').textContent = `ניתוח קבוצת ${groupInfo.groupName}`;
             
-            const changeInfo = groupChangeInfo.find(info => info["קיטלוג"] === groupName);
-            const changeInfoSection = document.getElementById('changeInfoSection');
-            if (changeInfo) {
-                document.getElementById('changeDate').textContent = changeInfo["תאריך פעימה"];
-                document.getElementById('changeDescription').textContent = changeInfo["תיאור"];
-                changeInfoSection.classList.remove('hidden');
+            const changeInfos = groupChangeInfo.filter(info => info["קיטלוג"] === groupName);
+            const changeInfoContainer = document.getElementById('changeInfoContainer');
+            changeInfoContainer.innerHTML = ''; 
+            
+            if (changeInfos.length > 0) {
+                changeInfoContainer.classList.remove('hidden');
+
+                changeInfos.sort((a, b) => {
+                    const [dayA, monthA, yearA] = a["תאריך פעימה"].split('.').map(Number);
+                    const [dayB, monthB, yearB] = b["תאריך פעימה"].split('.').map(Number);
+                    const dateA = new Date(yearA, monthA - 1, dayA);
+                    const dateB = new Date(yearB, monthB - 1, dayB);
+                    return dateA - dateB;
+                });
+                
+                const title = document.createElement('h3');
+                title.className = "text-xl font-bold text-amber-800 mb-2";
+                title.textContent = "שינויים מרכזיים בקבוצה";
+                changeInfoContainer.appendChild(title);
+
+                changeInfos.forEach((changeInfo, index) => {
+                    const infoBox = document.createElement('div');
+                    infoBox.className = "mb-4 p-4 bg-amber-50 border-r-4 border-amber-400 rounded-r-lg";
+                     if (index > 0) {
+                        infoBox.classList.add("mt-4", "pt-4", "border-t", "border-amber-200");
+                    }
+
+                    let linkHtml = '';
+                    const publicationUrl = changeInfo["קישור לפרסום"];
+                    if (publicationUrl && publicationUrl.trim() !== '') {
+                        linkHtml = `<a href="${publicationUrl}" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:underline font-semibold">קישור לפרסום</a>`;
+                    }
+                    
+                    let focusButtonHtml = '';
+                    const focusGroupName = changeInfo["התמקדות בקבוצה"];
+                    if (focusGroupName && focusGroupName.trim() !== '') {
+                        focusButtonHtml = `<button onclick="navigateToGroup('${focusGroupName}')" class="text-blue-600 hover:underline font-semibold">${focusGroupName}</button>`;
+                    }
+            
+                    const prefilledFormUrlTemplate = "https://docs.google.com/forms/d/e/1FAIpQLSdIaw-Az5kpJ6XGFzDkzz-MpsVAA0ZRz1eSdkHYGa-RVJRyGg/viewform?usp=pp_url&entry.1025341531=GROUP_NAME_PLACEHOLDER";
+                    const finalFormUrl = prefilledFormUrlTemplate.replace("GROUP_NAME_PLACEHOLDER", encodeURIComponent(groupName));
+            
+                    const suggestButtonHtml = `<a href="${finalFormUrl}" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:underline font-semibold">הוסף/חדד מידע</a>`;
+
+                    infoBox.innerHTML = `
+                        <p class="text-gray-700"><strong class="font-semibold">תאריך השינוי:</strong> ${changeInfo["תאריך פעימה"]}</p>
+                        <p class="text-gray-700 mt-1"><strong class="font-semibold">תיאור השינוי:</strong> ${changeInfo["תיאור"]}</p>
+                        <div class="flex justify-between items-center mt-2">
+                           <div class="flex items-center space-x-4 space-x-reverse">
+                                ${linkHtml}
+                                ${focusButtonHtml}
+                           </div>
+                           ${suggestButtonHtml}
+                        </div>
+                    `;
+                    changeInfoContainer.appendChild(infoBox);
+                });
             } else {
-                changeInfoSection.classList.add('hidden');
+                changeInfoContainer.classList.add('hidden');
             }
             
+            const changeQuarters = changeInfos.map(info => info["הרבעון שבו בוצע עיקר השינוי"]);
+            
             populateKmTable(groupData);
-            createStackedAreaChart(groupData, changeInfo ? changeInfo["הרבעון שבו בוצע עיקר השינוי"] : null);
+            createStackedAreaChart(groupData, changeQuarters);
             displayRidershipSummary(groupData);
             displayRatioSummary(groupData);
         }
         
+        function navigateToGroup(groupName) {
+            const targetGroup = transportData.find(line => line.groupName === groupName);
+            if (!targetGroup) {
+                console.warn(`Could not find group to navigate to: ${groupName}`);
+                return;
+            }
+
+            const targetDistrict = targetGroup.district;
+            
+            const districtButton = Array.from(document.querySelectorAll('#district-tabs-container button')).find(btn => btn.textContent === targetDistrict);
+            
+            if (districtButton) {
+                districtButton.click();
+                
+                setTimeout(() => {
+                    const groupButton = Array.from(document.querySelectorAll('#tabs-container button')).find(btn => btn.textContent === groupName);
+                    if (groupButton) {
+                        groupButton.click();
+                    } else {
+                        console.warn(`Could not find group button for: ${groupName} after switching district`);
+                    }
+                }, 50);
+            } else {
+                console.warn(`Could not find district button for: ${targetDistrict}`);
+            }
+        }
+
         // --- UI Population Functions ---
         function populateKmTable(data) {
             const kmTableBody = document.getElementById('kmDataTableBody');
@@ -265,11 +361,14 @@
             if (existingTfoot) existingTfoot.remove();
 
             if (startValue !== undefined && endValue !== undefined && startValue > 0) {
-                const change = ((endValue - startValue) / startValue) * 100;
+                const absoluteChange = endValue - startValue;
+                const change = (absoluteChange / startValue) * 100;
+                const sign = absoluteChange >= 0 ? '+' : '';
+                const footerText = `${sign}${absoluteChange.toLocaleString()} (${sign}${change.toFixed(1)}%)`;
                 const tfoot = kmTable.createTFoot();
                 const footerRow = tfoot.insertRow();
                 footerRow.className = 'bg-gray-100 font-bold';
-                footerRow.innerHTML = `<td colspan="2" class="py-3 px-4 text-right">היקף השינוי (Q4 2018 - Q2 2025)</td><td class="py-3 px-4 text-left ${change >= 0 ? 'text-green-600' : 'text-red-600'}">${change.toFixed(1)}%</td>`;
+                footerRow.innerHTML = `<td colspan="2" class="py-3 px-4 text-right">היקף השינוי (Q4 2018 - Q2 2025)</td><td class="py-3 px-4 text-left ${change >= 0 ? 'text-green-600' : 'text-red-600'}">${footerText}</td>`;
             }
         }
 
@@ -283,13 +382,21 @@
             });
 
             const summaryEl = document.getElementById('ridershipChange');
+            if(data.length === 0) {
+                 summaryEl.textContent = 'N/A';
+                 summaryEl.className = 'text-lg font-bold text-gray-500';
+                 return;
+            }
+
             if (startValueTotal > 0) {
-                const change = ((endValueTotal - startValueTotal) / startValueTotal) * 100;
-                summaryEl.textContent = `${change.toFixed(1)}%`;
+                const absoluteChange = endValueTotal - startValueTotal;
+                const change = (absoluteChange / startValueTotal) * 100;
+                const sign = absoluteChange >= 0 ? '+' : '';
+                summaryEl.textContent = `${sign}${absoluteChange.toLocaleString()} (${sign}${change.toFixed(1)}%)`;
                 summaryEl.className = `text-lg font-bold ${change >= 0 ? 'text-green-600' : 'text-red-600'}`;
             } else {
                  if (endValueTotal > 0) {
-                    summaryEl.textContent = 'קו חדש';
+                    summaryEl.textContent = 'קווים חדשים';
                     summaryEl.className = 'text-lg font-bold text-blue-600';
                  } else {
                     summaryEl.textContent = 'N/A';
@@ -302,10 +409,12 @@
             const ratioTextEl = document.getElementById('ratioSummaryText');
             const ratioSectionEl = document.getElementById('ratioSummarySection');
 
-            // 1. Calculate Ridership Change (Q1 2018 -> Q2 2025)
-            let startRidershipTotal = 0;
-            let endRidershipTotal = 0;
-            let hasStartRidership = false;
+            if(data.length === 0) {
+                ratioSectionEl.classList.add('hidden');
+                return;
+            }
+
+            let startRidershipTotal = 0, endRidershipTotal = 0, hasStartRidership = false;
             data.forEach(line => {
                 const startDP = line.ridershipData.find(dp => dp.year === 2018 && dp.quarter === 'Q1');
                 if (startDP) {
@@ -322,7 +431,6 @@
             }
             const ridershipChange = endRidershipTotal - startRidershipTotal;
 
-            // 2. Calculate Kilometer Change (Q4 2018 -> Q2 2025)
             const kmSummary = {};
             data.forEach(line => {
                 line.kilometerData.forEach(dp => {
@@ -339,8 +447,6 @@
             }
 
             const kmChange = endKmTotal - startKmTotal;
-
-            // 3. Calculate Ratio and build text
             ratioSectionEl.classList.remove('hidden');
 
             if (kmChange === 0) {
@@ -349,19 +455,129 @@
             }
 
             const ratio = ridershipChange / kmChange;
-
             let kmText = kmChange > 0 ? "שהוסף" : "שנגרע";
             let passengerText = ridershipChange >= 0 ? "נוספו" : "נגרעו";
             let passengerValue = Math.abs(ratio).toFixed(1);
-
             ratioTextEl.textContent = `על כל ק"מ ${kmText} בתקופה הנבחנת, ${passengerText} ${passengerValue} נוסעים.`;
         }
+        
+        function populateCustomLegend(chart, lastLabel, groupData) {
+            const legendContainer = document.getElementById('custom-legend-container');
+            legendContainer.innerHTML = '';
+            const lastLabelIndex = chart.data.labels.indexOf(lastLabel);
 
-        function createStackedAreaChart(data, changeQuarter) {
-            const ctx = document.getElementById('ridershipChart').getContext('2d');
-            if (currentChart) {
-                currentChart.destroy();
+            const legendItemsData = chart.data.datasets.map((dataset, index) => ({
+                dataset,
+                index
+            })).sort((a, b) => a.dataset.lineNumber - b.dataset.lineNumber);
+
+            const activeItems = [];
+            const cancelledItems = [];
+
+            legendItemsData.forEach(({ dataset, index }) => {
+                const isCancelled = lastLabelIndex === -1 || !dataset.data[lastLabelIndex];
+                
+                const legendItem = document.createElement('div');
+                legendItem.className = 'flex items-center cursor-pointer p-1 rounded-md';
+                
+                const colorBox = document.createElement('span');
+                colorBox.className = 'w-4 h-4 mr-2 ml-1 rounded flex items-center justify-center';
+                colorBox.style.backgroundColor = dataset.borderColor;
+                
+                const checkmark = document.createElement('span');
+                checkmark.innerHTML = '&#10003;'; // Checkmark symbol
+                checkmark.className = 'text-white text-xs font-bold';
+
+                colorBox.appendChild(checkmark);
+                
+                const textContainer = document.createElement('span');
+                textContainer.className = 'text-sm text-gray-700';
+
+                const labelText = dataset.label;
+                const makat = dataset.makat;
+                const match = labelText.match(/(.*)(\(\s*\d+\s*\))$/);
+
+                if (match && makat) {
+                    const lineNamePart = match[1];
+                    const makatPart = match[2];
+                    textContainer.appendChild(document.createTextNode(lineNamePart));
+                    const link = document.createElement('a');
+                    link.href = `https://markav.net/line/${makat}/`;
+                    link.textContent = makatPart;
+                    link.target = '_blank';
+                    link.rel = 'noopener noreferrer';
+                    link.className = 'text-blue-600 hover:underline';
+                    link.onclick = (e) => e.stopPropagation();
+                    textContainer.appendChild(link);
+                } else {
+                    textContainer.innerText = labelText;
+                }
+                
+                if (!chart.isDatasetVisible(index)) {
+                    legendItem.classList.add('opacity-50');
+                    textContainer.classList.add('line-through');
+                    checkmark.style.display = 'none';
+                }
+
+                legendItem.appendChild(colorBox);
+                legendItem.appendChild(textContainer);
+
+                legendItem.onclick = () => {
+                    const isVisible = chart.isDatasetVisible(index);
+                    chart.setDatasetVisibility(index, !isVisible);
+                    chart.update();
+
+                    const visibleLineNames = chart.data.datasets
+                        .filter((ds, i) => chart.isDatasetVisible(i))
+                        .map(ds => ds.label);
+
+                    const filteredData = groupData.filter(line => visibleLineNames.includes(line.lineName));
+                    
+                    displayRidershipSummary(filteredData);
+                    populateKmTable(filteredData);
+                    displayRatioSummary(filteredData);
+
+                    populateCustomLegend(chart, lastLabel, groupData);
+                };
+                
+                if(isCancelled) {
+                    cancelledItems.push(legendItem);
+                } else {
+                    activeItems.push(legendItem);
+                }
+            });
+
+            const activeItemsContainer = document.createElement('div');
+            activeItemsContainer.className = 'w-full flex flex-wrap justify-center gap-x-4 gap-y-2';
+            
+            if (activeItems.length > 0) {
+                const activeTitle = document.createElement('h4');
+                activeTitle.className = 'w-full text-center text-sm font-bold text-gray-600 mt-2 mb-2';
+                activeTitle.textContent = 'קווים פעילים';
+                legendContainer.appendChild(activeTitle);
+                activeItems.forEach(item => activeItemsContainer.appendChild(item));
+                legendContainer.appendChild(activeItemsContainer);
             }
+
+
+            if (cancelledItems.length > 0) {
+                const cancelledItemsContainer = document.createElement('div');
+                cancelledItemsContainer.className = 'w-full flex flex-wrap justify-center gap-x-4 gap-y-2';
+
+                const cancelledTitle = document.createElement('h4');
+                cancelledTitle.className = 'w-full text-center text-sm font-bold text-gray-600 mt-4 mb-2';
+                cancelledTitle.textContent = 'קווים לא פעילים';
+                legendContainer.appendChild(cancelledTitle);
+                cancelledItems.forEach(item => cancelledItemsContainer.appendChild(item));
+                legendContainer.appendChild(cancelledItemsContainer);
+
+            }
+        }
+
+
+        function createStackedAreaChart(data, changeQuarters) {
+            const ctx = document.getElementById('ridershipChart').getContext('2d');
+            if (currentChart) currentChart.destroy();
 
             const allLabelsSet = new Set();
             data.forEach(line => line.ridershipData.forEach(dp => allLabelsSet.add(`${dp.quarter}/${dp.year.toString().slice(-2)}`)));
@@ -382,35 +598,86 @@
             const datasets = data.map((line, index) => {
                 const dataMap = new Map(line.ridershipData.map(dp => [`${dp.quarter}/${dp.year.toString().slice(-2)}`, dp.weeklyAvgPassengers]));
                 const chartData = sortedLabels.map(label => dataMap.get(label) || 0);
+                const makat = line.id.replace('line-', '');
                 return {
-                    label: line.lineName, data: chartData, fill: true,
-                    borderColor: colors[index % colors.length].border, backgroundColor: colors[index % colors.length].bg, tension: 0.1,
+                    label: line.lineName,
+                    lineNumber: parseInt(line.lineNumber, 10),
+                    makat: makat,
+                    data: chartData,
+                    fill: true,
+                    borderColor: colors[index % colors.length].border,
+                    backgroundColor: colors[index % colors.length].bg,
+                    tension: 0.1,
                 };
-            });
+            }).sort((a, b) => a.lineNumber - b.lineNumber);
             
             const annotations = {};
-            if (changeQuarter) {
-                const changeIndex = sortedLabels.indexOf(changeQuarter);
-                if (changeIndex !== -1) {
-                    annotations.changeLine = {
-                        type: 'line',
-                        xMin: changeIndex,
-                        xMax: changeIndex,
-                        borderColor: 'rgb(239, 68, 68)', // red-500
-                        borderWidth: 2,
-                        borderDash: [6, 6],
-                        label: {
-                            content: 'שינוי מרכזי',
-                            display: true,
-                            position: 'start',
-                            backgroundColor: 'rgba(239, 68, 68, 0.8)',
-                            font: {
-                                family: 'Assistant',
-                                weight: 'bold'
+            
+            const coronaIndex = sortedLabels.indexOf('Q2/20');
+            if (coronaIndex !== -1) {
+                annotations.coronaLine = {
+                    type: 'line',
+                    xMin: coronaIndex,
+                    xMax: coronaIndex,
+                    borderColor: 'transparent',
+                    borderWidth: 0,
+                    label: {
+                        content: 'קורונה',
+                        display: true,
+                        position: 'center',
+                        yAdjust: 0,
+                        backgroundColor: 'rgba(75, 85, 99, 0.8)', // gray-600
+                        font: { family: 'Assistant', weight: 'bold', size: 10 },
+                        padding: 4,
+                        borderRadius: 4,
+                        rotation: -90
+                    }
+                };
+            }
+
+            const warIndex = sortedLabels.indexOf('Q4/23');
+            if (warIndex !== -1) {
+                annotations.warLine = {
+                    type: 'line',
+                    xMin: warIndex,
+                    xMax: warIndex,
+                    borderColor: 'transparent',
+                    borderWidth: 0,
+                    label: {
+                        content: 'מלחמת 7.10',
+                        display: true,
+                        position: 'center',
+                        yAdjust: 0,
+                        backgroundColor: 'rgba(75, 85, 99, 0.8)', // gray-600
+                        font: { family: 'Assistant', weight: 'bold', size: 10 },
+                        padding: 4,
+                        borderRadius: 4,
+                        rotation: -90
+                    }
+                };
+            }
+
+            if (changeQuarters && changeQuarters.length > 0) {
+                 changeQuarters.forEach((changeQuarter, index) => {
+                    const changeIndex = sortedLabels.indexOf(changeQuarter);
+                    if (changeIndex !== -1) {
+                        annotations[`changeLine${index}`] = {
+                            type: 'line',
+                            xMin: changeIndex,
+                            xMax: changeIndex,
+                            borderColor: 'rgb(239, 68, 68)',
+                            borderWidth: 2,
+                            borderDash: [6, 6],
+                            label: {
+                                content: 'שינוי מרכזי', 
+                                display: true, 
+                                position: 'start',
+                                backgroundColor: 'rgba(239, 68, 68, 0.8)', 
+                                font: { family: 'Assistant', weight: 'bold' }
                             }
-                        }
-                    };
-                }
+                        };
+                    }
+                 });
             }
             
             currentChart = new Chart(ctx, {
@@ -419,116 +686,322 @@
                     responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
                     scales: { y: { stacked: true, beginAtZero: true, ticks: { callback: value => value.toLocaleString() } } },
                     plugins: { 
+                        legend: {
+                           display: false
+                        },
                         tooltip: { callbacks: { label: context => `${context.dataset.label}: ${context.parsed.y.toLocaleString()}` } },
-                        annotation: {
-                            annotations: annotations
-                        }
+                        annotation: { annotations: annotations }
                     }
                 }
             });
+            const lastLabel = sortedLabels.length > 0 ? sortedLabels[sortedLabels.length - 1] : null;
+            populateCustomLegend(currentChart, lastLabel, data);
         }
         
         function setupGroupTabs(groupsForDistrict) {
             const tabsContainer = document.getElementById('tabs-container');
             tabsContainer.innerHTML = '';
             
-            if (!groupsForDistrict) return;
+            if (!groupsForDistrict || groupsForDistrict.length === 0) {
+                 tabsContainer.innerHTML = '<p class="p-4 text-gray-500">לא נמצאו קבוצות נתונים עבור מחוז זה.</p>';
+                 renderGroupData(null);
+                 return;
+            };
 
-            groupsForDistrict.forEach((name, index) => {
-                const tab = document.createElement('button');
-                tab.textContent = name;
-                tab.className = `py-2 px-4 whitespace-nowrap font-semibold border-b-2 border-transparent text-gray-500 hover:text-blue-600 hover:border-blue-500 focus:outline-none`;
-                
-                if (index === 0) {
-                    tab.classList.add('tab-active');
+            const datedGroups = {};
+            const undatedGroups = [];
+
+            groupsForDistrict.forEach(name => {
+                const match = name.match(/(\d{2}\.\d{2}\.\d{4})$/);
+                if (match) {
+                    const year = match[1].split('.')[2];
+                    if (!datedGroups[year]) {
+                        datedGroups[year] = [];
+                    }
+                    datedGroups[year].push(name);
+                } else {
+                    undatedGroups.push(name);
                 }
-                
-                tab.addEventListener('click', () => {
-                    document.querySelectorAll('#tabs-container button').forEach(t => t.classList.remove('tab-active'));
-                    tab.classList.add('tab-active');
-                    renderGroupData(name);
-                });
-                tabsContainer.appendChild(tab);
             });
+
+            const sortedYears = Object.keys(datedGroups).sort((a,b) => b - a); // Sort years descending
+
+            sortedYears.forEach(year => {
+                const yearSectionContainer = document.createElement('div');
+                yearSectionContainer.className = 'w-full flex flex-wrap items-center gap-2 mt-2';
+                tabsContainer.appendChild(yearSectionContainer);
+
+                const title = document.createElement('h4');
+                title.className = 'text-base font-bold text-gray-700 mr-2';
+                title.textContent = year;
+                yearSectionContainer.appendChild(title);
+
+                datedGroups[year].sort().forEach(name => {
+                    const button = createGroupButton(name);
+                    yearSectionContainer.appendChild(button);
+                });
+            });
+
+            if (undatedGroups.length > 0) {
+                const undatedContainer = document.createElement('div');
+                undatedContainer.className = 'w-full mt-4 pt-4 border-t border-gray-200';
+                tabsContainer.appendChild(undatedContainer);
+
+                const title = document.createElement('h4');
+                title.className = 'text-base font-bold text-gray-700 mb-2';
+                title.textContent = 'קבוצות בהם לא בוצעו שינויים משמעותיים בתקופה הנבחנת';
+                undatedContainer.appendChild(title);
+                
+                const buttonContainer = document.createElement('div');
+                buttonContainer.className = 'flex flex-wrap gap-2';
+                undatedContainer.appendChild(buttonContainer);
+
+                undatedGroups.sort().forEach(name => {
+                    const button = createGroupButton(name);
+                    buttonContainer.appendChild(button);
+                });
+            }
+
+            // Click the first available button
+            const firstButton = tabsContainer.querySelector('button');
+            if(firstButton) {
+                firstButton.classList.remove('bg-white', 'text-gray-700', 'border-gray-300', 'hover:bg-gray-100');
+                firstButton.classList.add('bg-blue-600', 'text-white', 'border-blue-600');
+                renderGroupData(firstButton.textContent);
+            }
+        }
+
+        function createGroupButton(name) {
+            const button = document.createElement('button');
+            button.textContent = name;
+            button.className = `py-2 px-4 rounded-md font-semibold border focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-150 bg-white text-gray-700 border-gray-300 hover:bg-gray-100`;
+            
+            button.addEventListener('click', () => {
+                document.querySelectorAll('#tabs-container button').forEach(btn => {
+                    btn.classList.remove('bg-blue-600', 'text-white', 'border-blue-600');
+                    btn.classList.add('bg-white', 'text-gray-700', 'border-gray-300', 'hover:bg-gray-100');
+                });
+                
+                button.classList.remove('bg-white', 'text-gray-700', 'border-gray-300', 'hover:bg-gray-100');
+                button.classList.add('bg-blue-600', 'text-white', 'border-blue-600');
+                
+                renderGroupData(name);
+            });
+            return button;
         }
 
         function setupDistrictTabs() {
             const districtTabsContainer = document.getElementById('district-tabs-container');
             districtTabsContainer.innerHTML = ''; 
 
-            districtNames.forEach((name, index) => {
-                const tab = document.createElement('button');
-                tab.textContent = name;
-                tab.className = `py-2 px-4 whitespace-nowrap font-semibold border-b-2 border-transparent text-gray-500 hover:text-blue-600 hover:border-blue-500 focus:outline-none`;
+            ALL_DISTRICTS.forEach(name => {
+                const button = document.createElement('button');
+                button.textContent = name;
+                button.className = `py-2 px-4 rounded-md font-semibold border focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-150 bg-white text-gray-700 border-gray-300 hover:bg-gray-100`;
 
-                if (index === 0) {
-                    tab.classList.add('tab-active');
-                }
-
-                tab.addEventListener('click', () => {
-                    document.querySelectorAll('#district-tabs-container button').forEach(t => t.classList.remove('tab-active'));
-                    tab.classList.add('tab-active');
+                button.addEventListener('click', () => {
+                    document.querySelectorAll('#district-tabs-container button').forEach(btn => {
+                        btn.classList.remove('bg-blue-600', 'text-white', 'border-blue-600');
+                        btn.classList.add('bg-white', 'text-gray-700', 'border-gray-300', 'hover:bg-gray-100');
+                    });
+                    
+                    button.classList.remove('bg-white', 'text-gray-700', 'border-gray-300', 'hover:bg-gray-100');
+                    button.classList.add('bg-blue-600', 'text-white', 'border-blue-600');
                     
                     const groupsForDistrict = dataMap[name];
                     setupGroupTabs(groupsForDistrict);
                     
-                    if (groupsForDistrict && groupsForDistrict.length > 0) {
-                        renderGroupData(groupsForDistrict[0]);
+                    const firstGroupButton = document.querySelector('#tabs-container button');
+                    if (firstGroupButton) {
+                        firstGroupButton.click();
                     } else {
-                        renderGroupData(null); // Hide content if no groups
+                        renderGroupData(null);
                     }
                 });
-                districtTabsContainer.appendChild(tab);
+                districtTabsContainer.appendChild(button);
             });
         }
 
-
         // --- Initial Load ---
         document.addEventListener('DOMContentLoaded', () => {
-            transportData = processRawData(rawData);
             
-            transportData.forEach(item => {
-                if (!dataMap[item.district]) {
-                    dataMap[item.district] = [];
-                }
-                if (!dataMap[item.district].includes(item.groupName)) {
-                    dataMap[item.district].push(item.groupName);
-                }
-            });
-            
-            districtNames = Object.keys(dataMap);
+            function initializeApp(rawData, groupInfoData) {
+                document.getElementById('loading-container').style.display = 'none';
+                document.getElementById('app-container').classList.remove('hidden');
 
-            if (districtNames.length > 0) {
-                setupDistrictTabs();
-                const firstDistrict = districtNames[0];
-                const groupsForFirstDistrict = dataMap[firstDistrict];
-                setupGroupTabs(groupsForFirstDistrict);
+                transportData = processRawData(rawData);
+                groupChangeInfo = (groupInfoData && groupInfoData.length > 0) ? groupInfoData : [];
                 
-                if (groupsForFirstDistrict && groupsForFirstDistrict.length > 0) {
-                    renderGroupData(groupsForFirstDistrict[0]);
+                transportData.forEach(item => {
+                    if (!dataMap[item.district]) {
+                        dataMap[item.district] = [];
+                    }
+                    if (!dataMap[item.district].includes(item.groupName)) {
+                        dataMap[item.district].push(item.groupName);
+                    }
+                });
+                
+                setupDistrictTabs();
+
+                const firstDistrictTab = document.querySelector('#district-tabs-container button');
+                if (firstDistrictTab) {
+                    firstDistrictTab.click();
+                } else {
+                     console.warn("No district tabs were created to initialize the application.");
+                     setupGroupTabs(null);
+                     renderGroupData(null);
                 }
+    
+                document.getElementById('selectAllBtn').addEventListener('click', () => {
+                    if (currentChart) {
+                        const groupName = document.getElementById('groupTitle').textContent.replace('ניתוח קבוצת ', '');
+                        const groupData = transportData.filter(d => d.groupName === groupName);
+
+                        currentChart.data.datasets.forEach((dataset, index) => {
+                           currentChart.setDatasetVisibility(index, true);
+                        });
+                        currentChart.update();
+                        
+                        displayRidershipSummary(groupData);
+                        populateKmTable(groupData);
+                        displayRatioSummary(groupData);
+                        const lastLabel = currentChart.data.labels[currentChart.data.labels.length - 1];
+                        populateCustomLegend(currentChart, lastLabel, groupData);
+                    }
+                });
+    
+                document.getElementById('clearAllBtn').addEventListener('click', () => {
+                    if (currentChart) {
+                        const groupName = document.getElementById('groupTitle').textContent.replace('ניתוח קבוצת ', '');
+                        const groupData = transportData.filter(d => d.groupName === groupName);
+
+                        currentChart.data.datasets.forEach((dataset, index) => {
+                             currentChart.setDatasetVisibility(index, false);
+                        });
+                        currentChart.update();
+
+                        displayRidershipSummary([]);
+                        populateKmTable([]);
+                        displayRatioSummary([]);
+                        const lastLabel = currentChart.data.labels[currentChart.data.labels.length - 1];
+                        populateCustomLegend(currentChart, lastLabel, groupData);
+                    }
+                });
+                
+                document.getElementById('exportCsvBtn').addEventListener('click', () => {
+                    if (currentChart) {
+                        const groupName = document.getElementById('groupTitle').textContent.replace('ניתוח קבוצת ', '');
+                        exportToCsv(`${groupName}_ridership_data.csv`, currentChart);
+                    }
+                });
+                
+                let searchTimeout;
+                document.getElementById('search-input').addEventListener('input', (e) => {
+                    const searchTerm = e.target.value.toLowerCase();
+                    const searchResultsContainer = document.getElementById('search-results');
+                    
+                    clearTimeout(searchTimeout);
+                    if (searchTerm.length < 2) {
+                        searchResultsContainer.innerHTML = '';
+                        searchResultsContainer.classList.add('hidden');
+                        return;
+                    }
+
+                    searchTimeout = setTimeout(() => {
+                        const allGroups = Object.values(dataMap).flat();
+                        const uniqueGroups = [...new Set(allGroups)];
+                        
+                        const results = uniqueGroups.filter(groupName => groupName.toLowerCase().includes(searchTerm));
+                        
+                        searchResultsContainer.innerHTML = '';
+                        if (results.length > 0) {
+                            searchResultsContainer.classList.remove('hidden');
+                            results.forEach(result => {
+                                const resultItem = document.createElement('div');
+                                resultItem.textContent = result;
+                                resultItem.className = 'p-2 hover:bg-gray-100 cursor-pointer';
+                                resultItem.onclick = () => {
+                                    const foundGroup = transportData.find(line => line.groupName === result);
+                                    if(foundGroup) {
+                                        const districtButton = Array.from(document.querySelectorAll('#district-tabs-container button')).find(btn => btn.textContent === foundGroup.district);
+                                        if (districtButton) {
+                                            districtButton.click();
+                                            setTimeout(() => {
+                                                const groupButton = Array.from(document.querySelectorAll('#tabs-container button')).find(btn => btn.textContent === foundGroup.groupName);
+                                                if (groupButton) {
+                                                    groupButton.click();
+                                                }
+                                            }, 50);
+                                        }
+                                    }
+                                    document.getElementById('search-input').value = '';
+                                    searchResultsContainer.classList.add('hidden');
+                                };
+                                searchResultsContainer.appendChild(resultItem);
+                            });
+                        } else {
+                            searchResultsContainer.classList.add('hidden');
+                        }
+                    }, 300);
+                });
             }
 
-            document.getElementById('selectAllBtn').addEventListener('click', () => {
-                if (currentChart) {
-                    currentChart.data.datasets.forEach((dataset, index) => {
-                        currentChart.getDatasetMeta(index).hidden = false;
-                    });
-                    currentChart.update();
-                }
-            });
+            function exportToCsv(filename, chart) {
+                const headers = ['תקופה', ...chart.data.datasets.map(ds => `"${ds.label.replace(/"/g, '""')}"`)].join(',');
 
-            document.getElementById('clearAllBtn').addEventListener('click', () => {
-                if (currentChart) {
-                    currentChart.data.datasets.forEach((dataset, index) => {
-                        currentChart.getDatasetMeta(index).hidden = true;
+                const rows = chart.data.labels.map((label, index) => {
+                    const row = [`"${label}"`];
+                    chart.data.datasets.forEach(dataset => {
+                        row.push(dataset.data[index] || 0);
                     });
-                    currentChart.update();
+                    return row.join(',');
+                });
+
+                const csvContent = [headers, ...rows].join('\n');
+                
+                const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement("a");
+                
+                if (link.download !== undefined) {
+                    const url = URL.createObjectURL(blob);
+                    link.setAttribute("href", url);
+                    link.setAttribute("download", filename);
+                    link.style.visibility = 'hidden';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
                 }
+            }
+            
+            const dataUrl = `https://raw.githubusercontent.com/amirvigo-lab/israel-bus-transit-changes/main/data.json?timestamp=${new Date().getTime()}`;
+            const groupInfoUrl = `https://raw.githubusercontent.com/amirvigo-lab/israel-bus-transit-changes/main/groupinfo.json?timestamp=${new Date().getTime()}`;
+
+            Promise.all([
+                fetch(dataUrl).then(res => {
+                    if (!res.ok) throw new Error(`Failed to fetch data.json: ${res.status}`);
+                    return res.json();
+                }),
+                fetch(groupInfoUrl).then(res => {
+                    if (!res.ok) { 
+                        console.warn(`Failed to fetch groupinfo.json: ${res.status}. Returning empty array.`);
+                        return []; // Return empty array on failure
+                    }
+                    return res.json();
+                }).catch(e => {
+                    console.warn(`Error fetching or parsing groupinfo.json: ${e}. Returning empty array.`);
+                    return []; // Return empty array on error
+                })
+            ])
+            .then(([rawData, groupInfoData]) => {
+                initializeApp(rawData, groupInfoData);
+            })
+            .catch(error => {
+                console.error("Failed to load critical data from GitHub:", error);
+                const loadingContainer = document.getElementById('loading-container');
+                loadingContainer.innerHTML = `<p class="text-red-500 font-bold">שגיאה: טעינת הנתונים נכשלה. אנא ודא שהקובץ data.json ב-GitHub תקין וזמין.</p>`;
             });
         });
     </script>
 </body>
 </html>
-
 
